@@ -1,0 +1,128 @@
+- project:
+    name: petclinic
+    jobs:
+      - 'petclinic/PreCommit'
+      - 'petclinic/Build'
+      - 'petclinic/Deployment'
+
+
+
+- job:
+    name: petclinic/Build
+    project-type: pipeline
+    concurrent: true
+    triggers:
+      - gerrit:
+          trigger-on:
+            - change-merged-event
+        projects:
+          - project-compare-type: 'PLAIN'
+            project-pattern: 'All-Projects/spring-framework-petclinic'
+            branches:
+              - branch-compare-type: 'PLAIN'
+                branch-pattern: 'dev'
+        server-name: gerrit_local
+    properties:
+      - build-discarder:
+          days-to-keep: 21
+      - inject:
+          enabled: true
+          keep-build-variables: true
+          keep-system-variables: true
+          properties-content: |-
+            deploy_host=35.243.244.220
+            mysql_host=${deploy_host}
+            mysql_username=petuser
+            mysql_password=petpass
+    parameters:
+      - string:
+          default: 'dev'
+          description: 'GERRIT_BRANCH'
+          name: GERRIT_BRANCH
+
+    dsl:
+      !include-raw: 'Build.groovy'
+
+- job:
+    name: petclinic/PreCommit
+    project-type: pipeline
+    concurrent: true
+    triggers:
+      - gerrit:
+          trigger-on:
+            - patchset-created-event:
+                exclude-trivial-rebase: true
+                exclude-no-code-change: true
+            - draft-published-event: true
+          projects:
+            - project-compare-type: 'PLAIN'
+              project-pattern: 'All-Projects/spring-framework-petclinic'
+              branches:
+                - branch-compare-type: 'REG_EXP'
+                  branch-pattern: '.*'
+          server-name: gerrit_local
+    properties:
+      - build-discarder:
+          days-to-keep: 21
+      - inject:
+          enabled: true
+          keep-build-variables: true
+          keep-system-variables: true
+          properties-content: |-
+            deploy_host=35.243.244.220
+            mysql_host=${deploy_host}
+            mysql_username=petuser
+            mysql_password=petpass
+    dsl:
+      !include-raw: 'PreCommit.groovy'
+
+- job:
+    name: petclinic/Deployment
+    project-type: pipeline
+    concurrent: false
+    properties:
+      - build-discarder:
+          days-to-keep: 21
+      - inject:
+          enabled: true
+          keep-build-variables: true
+          keep-system-variables: true
+          properties-content: |-
+            deploy_host=35.243.244.220
+            mysql_host=localhost
+            mysql_username=root
+            mysql_password=petclinic
+            mysql_dbname=petclinic
+            app_name=spring-framework-petclinic
+    parameters:
+      - string:
+          default: 'noversion'
+          description: 'artifact version'
+          name: version
+    dsl:
+      !include-raw: 'Deployment.groovy'
+
+
+- job:
+    name: petclinic/Promotion
+    project-type: pipeline
+    concurrent: false
+    properties:
+      - build-discarder:
+          days-to-keep: 21
+      - inject:
+          enabled: true
+          keep-build-variables: true
+          keep-system-variables: true
+          properties-content: |-
+            deploy_host=35.243.244.220
+            mysql_host=${deploy_host}
+            mysql_username=petuser
+            mysql_password=petpass
+    parameters:
+      - string:
+          default: 'noversion'
+          description: 'artifact version'
+          name: version
+    dsl:
+      !include-raw: 'Promotion.groovy'

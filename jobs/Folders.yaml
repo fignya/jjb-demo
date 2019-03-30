@@ -1,0 +1,29 @@
+- project:
+    name: projectsfolder
+    project_folder:
+      - 'petclinic'
+
+    jobs:
+      - project_folders
+
+- job-group:
+    name: project_folders
+    jobs:
+      - '{project_folder}'
+
+- job-template:
+    name: '{project_folder}'
+    project-type: folder
+
+- view:
+    name: ALL
+    description: 'ALL Project Folders'
+    filter-executors: false
+    filter-queue: true
+    view-type: list
+    columns:
+      - status
+      - job
+    job-name:
+      - 'petclinic'
+
